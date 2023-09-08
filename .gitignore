@@ -1,0 +1,4 @@
+/htmldocs
+/tmp
+/tests/*
+!/tests/*.nim*
