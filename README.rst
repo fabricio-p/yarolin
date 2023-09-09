@@ -43,3 +43,5 @@ TODO
     - ☐ `throw` that throws the error of the result as an exception if it is a failure, otherwise just gives the unwraped value..
     - ☐ `with` macro that does pattern matching on the result.
 - ☐ Options.
+  - ☑ Reuse and expose `std/options`.
+  - ☐ Other stuff.
