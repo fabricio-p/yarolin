@@ -6,6 +6,14 @@ A library offering feature complete functionality for options and results.
 =====
 Usage
 =====
+Add this line to your `.nimble` file:
+
+.. code-block:: nim
+
+  requires "https://github.com/fabriciopashaj/yarolin"
+
+and then you can import it in your project.
+
 -------
 Results
 -------
@@ -20,6 +28,22 @@ Results
 
   echo foo().unwrapErr() # prints "420"
   echo bar().unwrap() # prints "Hello world"
+
+-------
+Options
+-------
+.. code-block:: nim
+
+  import yarolin/options
+
+  proc at[T](arr: openArray[T], i: int): ?T =
+    if i in 0..arr.high:
+      return some(arr[i])
+    return none(T)
+
+  let a = @[1, 2, 3]
+  echo a.at(0).get() # prints "1"
+  echo a.at(100).isSome() # prints "false"
 
 ====
 TODO
