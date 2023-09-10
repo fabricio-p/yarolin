@@ -55,12 +55,12 @@ proc unwrap*[V, E](res: sink Result[V, E]): V
       "Tried to unwrap the value of an failure Result")
 proc unwrapErr*[V, E](res: sink Result[V, E]): E
                      {.inline, raises: [UnwrapErrDefect].} =
-  if res.successful():
+  if not res.successful():
+    result = res.err
+  else:
     raise newException(
       UnwrapErrDefect,
       "Tried to unwrap the error of a success Result")
-  else:
-    result = res.err
 
 template `!+`*[V, E](resultType: typedesc[Result[V, E]], val: sink V): untyped =
   success[V, E](val)
@@ -79,3 +79,22 @@ template `or`*[V, E](res: Result[V, E], body: untyped): untyped =
     res.unsafeGetVal()[]
   else:
     body
+
+macro `try`*[V, E](res: Result[V, E]): untyped =
+  let resSym = genSym(ident = "res")
+  quote do:
+    let `resSym` = `res`
+    if `resSym`.successful():
+      `resSym`.unsafeGetVal()[]
+    else:
+      result =!- `resSym`.unsafeGetErr()[]
+      return
+
+func throw*[V, E, X](res: sink Result[V, E], errorType: typedesc[X]): V =
+  if res.successful():
+    return res.unsafeGetVal()[]
+  else:
+    raise newException(X, $(res.unsafeGetErr()[]))
+
+func throw*[V, E](res: sink Result[V, E]): V =
+  return res.throw(CatchableError)
