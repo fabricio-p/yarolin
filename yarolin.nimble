@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.0.1"
+version       = "0.0.5"
 author        = "Fabricio Pashaj"
 description   = "Yet Another Result/Option Library In Nim"
 license       = "MIT"

@@ -98,3 +98,70 @@ func throw*[V, E, X](res: sink Result[V, E], errorType: typedesc[X]): V =
 
 func throw*[V, E](res: sink Result[V, E]): V =
   return res.throw(CatchableError)
+
+macro with*[V, E](res: Result[V, E], body: untyped): untyped =
+  let resSym = genSym(ident = "res")
+  body.expectLen 1, 2
+  result =
+    nnkStmtList.newTree(
+      nnkLetSection.newTree(
+        nnkIdentDefs.newTree(
+          resSym,
+          newEmptyNode(),
+          res)))
+  var
+    onFailure: NimNode = nil
+    onSuccess: NimNode = nil
+  for `case` in body:
+    `case`.expectKind nnkCall
+    `case`.expectLen 3
+    `case`[0].expectKind nnkIdent
+    `case`[1].expectKind { nnkIdent, nnkVarTy }
+    var branch =
+      if `case`[0].strVal == "successful":
+        onSuccess = nnkStmtList.newNimNode()
+        onSuccess
+      elif `case`[0].strVal == "failure":
+        onFailure = nnkStmtList.newNimNode()
+        onFailure
+      else:
+        error(
+          fmt"Expected 'successful' or 'failure', found {`case`[0].strVal}",
+          `case`[0])
+        break
+    let
+      (isMutable, varName) =
+        if `case`[1].kind == nnkIdent: (false, `case`[1])
+        else: (true, `case`[1][0])
+      varDecl = 
+        if varName.strVal == "_":
+          newEmptyNode()
+        else:
+          newTree(
+            if isMutable: nnkVarSection else: nnkLetSection,
+            nnkIdentDefs.newTree(
+              varName,
+              newEmptyNode(),
+              nnkBracketExpr.newTree(
+                nnkCall.newTree(
+                  if branch == onFailure: bindSym"unsafeGetErr"
+                  else: bindSym"unsafeGetVal",
+                  resSym))))
+    branch.add(nnkStmtList.newTree(varDecl, `case`[2]))
+  var
+    ifStmt = nnkIfStmt.newNimNode()
+    elifBrach = nnkElifBranch.newNimNode()
+    elseBranch: NimNode = nil
+  var
+    cond = nnkCall.newTree(bindSym"successful", resSym)
+    actions = onSuccess
+  if isNil(onSuccess):
+    cond = nnkPrefix.newTree(bindSym"not", cond)
+    actions = onFailure
+  elif body.len == 2:
+    elseBranch = nnkElse.newTree(onFailure)
+  elifBrach.add(cond, actions)
+  ifStmt.add(elifBrach)
+  if not isNil(elseBranch):
+    ifStmt.add(elseBranch)
+  result.add(ifStmt)
