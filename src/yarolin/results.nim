@@ -16,18 +16,10 @@ type
     err: E
     when V isnot SomePointer and E isnot SomePointer:
       successful: bool
-  UnwrapDefect = object of Defect
-  UnwrapErrDefect = object of Defect
+  UnwrapDefect* = object of Defect
+  UnwrapErrDefect* = object of Defect
 
-template `!`[E, V](err: typedesc[E], val: typedesc[V]): untyped = Result[V, E]
-
-proc successful*[V, E](res: Result[V, E]): bool {.inline.} =
-  when V is SomePointer:
-    result = not isNil(res.val)
-  elif E is SomePointer:
-    result = isNil(res.err)
-  else:
-    result = res.successful
+template `!`*[E, V](err: typedesc[E], val: typedesc[V]): untyped = Result[V, E]
 
 proc success*[V, E](val: sink V): Result[V, E] {.inline.} =
   result.val = val
@@ -42,25 +34,33 @@ proc failure*[V, E](err: sink E): Result[V, E] {.inline.} =
   when V is SomePointer:
     result.err = nil
 
+proc successful*[V, E](res: Result[V, E]): bool {.inline.} =
+  when V is SomePointer:
+    result = not isNil(res.val)
+  elif E is SomePointer:
+    result = isNil(res.err)
+  else:
+    result = res.successful
+
 proc unsafeGetVal*[V, E](res: Result[V, E]): ptr V {.inline.} = addr res.val
 proc unsafeGetErr*[V, E](res: Result[V, E]): ptr E {.inline.} = addr res.err
 
 proc unwrap*[V, E](res: sink Result[V, E]): V
                   {.inline, raises: [UnwrapDefect].} =
-  if res.successful():
-    result = res.val
-  else:
+  if not res.successful():
     raise newException(
       UnwrapDefect,
       "Tried to unwrap the value of an failure Result")
+  when V isnot void:
+    result = res.val
 proc unwrapErr*[V, E](res: sink Result[V, E]): E
                      {.inline, raises: [UnwrapErrDefect].} =
-  if not res.successful():
-    result = res.err
-  else:
+  if res.successful():
     raise newException(
       UnwrapErrDefect,
       "Tried to unwrap the error of a success Result")
+  when E isnot void:
+    result = res.err
 
 template `!+`*[V, E](resultType: typedesc[Result[V, E]], val: sink V): untyped =
   success[V, E](val)
@@ -74,11 +74,14 @@ template `=!+`*[V, E](res: var Result[V, E], val: sink V): untyped =
 template `=!-`*[V, E](res: var Result[V, E], err: sink E): untyped =
   res = failure[V, E](err)
 
-template `or`*[V, E](res: Result[V, E], body: untyped): untyped =
-  if res.successful():
-    res.unsafeGetVal()[]
-  else:
-    body
+macro `or`*[V, E](res: Result[V, E], body: untyped): untyped =
+  let resSym = genSym(ident = "res")
+  quote do:
+    let `resSym` = `res`
+    if `resSym`.successful():
+      `resSym`.unsafeGetVal()[]
+    else:
+      `body`
 
 macro `try`*[V, E](res: Result[V, E]): untyped =
   let resSym = genSym(ident = "res")
@@ -91,13 +94,14 @@ macro `try`*[V, E](res: Result[V, E]): untyped =
       return
 
 func throw*[V, E, X](res: sink Result[V, E], errorType: typedesc[X]): V =
-  if res.successful():
-    return res.unsafeGetVal()[]
-  else:
+  if not res.successful():
     raise newException(X, $(res.unsafeGetErr()[]))
+  when V isnot void:
+    result = res.val
 
 func throw*[V, E](res: sink Result[V, E]): V =
-  return res.throw(CatchableError)
+  when V isnot void:
+    result = res.throw(CatchableError)
 
 macro with*[V, E](res: Result[V, E], body: untyped): untyped =
   let resSym = genSym(ident = "res")
