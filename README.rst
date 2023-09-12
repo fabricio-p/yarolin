@@ -69,6 +69,8 @@ TODO
     - ☑ ``try`` macro that causes the functions to return the result if it is a failure, otherwise just gives the unwraped value.
     - ☑ ``throw`` function that throws the error of the result as an exception if it is a failure, otherwise just gives the unwraped value.
     - ☑ ``with`` macro that does pattern matching on the result.
+    - ☐ Stuff like ``map`` and ``mapErr``.
+  - ☑ Tests
 
   - ☐ Documentation.
 
