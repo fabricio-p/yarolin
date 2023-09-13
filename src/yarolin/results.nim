@@ -16,8 +16,8 @@ type
     err: E
     when V isnot SomePointer and E isnot SomePointer:
       successful: bool
-  UnwrapDefect* = object of Defect
-  UnwrapErrDefect* = object of Defect
+  UnpackValDefect* = object of Defect
+  UnpackErrDefect* = object of Defect
 
 template `!`*[E, V](err: typedesc[E], val: typedesc[V]): untyped = Result[V, E]
 
@@ -41,24 +41,26 @@ proc successful*[V, E](res: Result[V, E]): bool {.inline.} =
     result = isNil(res.err)
   else:
     result = res.successful
+proc unsuccessful*[V, E](res: Result[V, E]): bool {.inline.} =
+  not successful(res)
 
 proc unsafeGetVal*[V, E](res: Result[V, E]): ptr V {.inline.} = addr res.val
 proc unsafeGetErr*[V, E](res: Result[V, E]): ptr E {.inline.} = addr res.err
 
-proc unwrap*[V, E](res: sink Result[V, E]): V
-                  {.inline, raises: [UnwrapDefect].} =
+proc getVal*[V, E](res: sink Result[V, E]): V
+                  {.inline, raises: [UnpackValDefect].} =
   if not res.successful():
     raise newException(
-      UnwrapDefect,
-      "Tried to unwrap the value of an failure Result")
+      UnpackValDefect,
+      "Tried to get the value of an failure Result")
   when V isnot void:
     result = res.val
-proc unwrapErr*[V, E](res: sink Result[V, E]): E
-                     {.inline, raises: [UnwrapErrDefect].} =
+proc getErr*[V, E](res: sink Result[V, E]): E
+                  {.inline, raises: [UnpackErrDefect].} =
   if res.successful():
     raise newException(
-      UnwrapErrDefect,
-      "Tried to unwrap the error of a success Result")
+      UnpackErrDefect,
+      "Tried to get the error of a success Result")
   when E isnot void:
     result = res.err
 

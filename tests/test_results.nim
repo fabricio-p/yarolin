@@ -18,58 +18,58 @@ suite "results":
     check unsafeGetErr(res) != nil
     check name(typeof(unsafeGetErr(res))) == "ptr int"
     check unsafeGetErr(res)[] == 420
-  test "unwrap function":
+  test "getVal function":
     block:
       let res = success[int, void](1244)
       var raised = false
       try:
-        check unwrap(res) == 1244
-      except UnwrapDefect:
+        check getVal(res) == 1244
+      except UnpackValDefect:
         raised = true
       check raised == false
     block:
       let res = failure[void, int](765456)
       var raised = false
       try:
-        unwrap[void, int](res)
-      except UnwrapDefect:
+        getVal(res)
+      except UnpackValDefect:
         raised = true
       check raised == true
-  test "unwrapErr function":
+  test "getErr function":
     block:
       let res = failure[void, int](765456)
       var raised = false
       try:
-        check unwrapErr(res) == 765456
-      except UnwrapDefect:
+        check getErr(res) == 765456
+      except UnpackValDefect:
         raised = true
       check raised == false
     block:
       let res = success[int, void](1244)
       var raised = false
       try:
-        unwrapErr(res)
-      except UnwrapErrDefect:
+        getErr(res)
+      except UnpackErrDefect:
         raised = true
       check raised == true
   test "`!+` macro":
     let res = int!int !+ 69
     check successful(res)
-    check res.unwrap() == 69
+    check res.getVal() == 69
   test "`!-` macro":
     let res = int!int !- -1
     check not successful(res)
-    check res.unwrapErr() == -1
+    check res.getErr() == -1
   test "`=!+` macro":
     var res: int!int
     res =!+ 69
     check successful(res)
-    check res.unwrap() == 69
+    check res.getVal() == 69
   test "`=!-` macro":
     var res: int!int
     res =!- -1
     check not successful(res)
-    check res.unwrapErr() == -1
+    check res.getErr() == -1
   test "`or` macro":
     let
       res1 = success[int, int](122)
