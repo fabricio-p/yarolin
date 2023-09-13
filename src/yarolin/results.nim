@@ -171,3 +171,61 @@ macro with*[V, E](res: Result[V, E], body: untyped): untyped =
   if not isNil(elseBranch):
     ifStmt.add(elseBranch)
   result.add(ifStmt)
+
+proc successfulAnd*[V, E](res: Result[V, E], fn: proc(val: V): bool): bool
+                         {.effectsOf: [fn].} =
+  result = false
+  if res.successful():
+    result = fn(res.val)
+proc unsuccessfulAnd*[V, E](res: Result[V, E], fn: proc(err: E): bool): bool
+                           {.effectsOf: [fn].} =
+  result = false
+  if res.unsuccessful():
+    result = fn(res.err)
+
+macro successfulAndIt*[V, E](res: Result[V, E], body: untyped): untyped =
+  let resSym = genSym(ident = "res")
+  quote do:
+    let `resSym` = `res`
+    if `resSym`.successful():
+      let it {.inject.} = `resSym`.unsafeGetVal()[]
+      `body`
+    else:
+      false
+macro unsuccessfulAndIt*[V, E](res: Result[V, E], body: untyped): untyped =
+  let resSym = genSym(ident = "res")
+  quote do:
+    let `resSym` = `res`
+    if `resSym`.unsuccessful():
+      let it {.inject.} = `resSym`.unsafeGetErr()[]
+      `body`
+    else:
+      false
+
+# TODO: Macro versions
+proc mapVal*[V, E, U](res: sink Result[V, E],
+                      fn: proc(val: V): U): Result[U, E]
+                     {.effectsOf: [fn].} =
+  if res.successful():
+    return success[U, E](fn(res.val))
+  return failure[U, E](res.err)
+proc mapValOr*[V, E, U](res: sink Result[V, E],
+                        default: U,
+                        fn: proc(val: V): U): U {.effectsOf: [fn].} =
+  if res.successful():
+    return fn(res.val)
+  return default
+proc mapValOrElse*[V, E, U](res: sink Result[V, E],
+                            defaultFn: proc(err: E): U,
+                            fn: proc(val: V): U): U
+                           {.effectsOf: [fn, defaultFn].} =
+  if res.successful():
+    return fn(res.val)
+  return defaultFn(res.err)
+
+proc mapErr*[V, E, F](res: sink Result[V, E],
+                      fn: proc(val: E): F): Result[V, F]
+                     {.effectsOf: [fn].} =
+  if res.unsuccessful():
+    return failure[V, F](fn(res.err))
+  return success[V, F](res.val)

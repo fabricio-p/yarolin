@@ -1,4 +1,4 @@
-import unittest, typetraits
+import unittest, typetraits, sugar
 import ../src/yarolin/results
 
 suite "results":
@@ -121,3 +121,58 @@ suite "results":
       except Death:
         died = true
       check died == true
+  test "`successfulAnd` function":
+    block:
+      let res = success[int, string](0xabc)
+      check res.successfulAnd(val => val == 0xabc)
+    block:
+      let res = failure[int, string]("💀") # <C-V>U1f480 to get it in vim
+      check res.successfulAnd(val => val == 0xabc) == false
+  test "`unsuccessfulAnd` function":
+    block:
+      let res = failure[int, string]("💀")
+      check res.unsuccessfulAnd(err => err.len == 4)
+    block:
+      let res = success[int, string](0xabc)
+      check res.unsuccessfulAnd(err => err.len == 4) == false
+  test "`successfulAndIt` macro":
+    block:
+      let res = success[int, string](0xabc)
+      check res.successfulAndIt(it == 0xabc)
+    block:
+      let res = failure[int, string]("💀") # <C-V>U1f480 to get it in vim
+      check res.successfulAndIt(it == 0xabc) == false
+  test "`unsuccessfulAndIt` macro":
+    block:
+      let res = failure[int, string]("💀")
+      check res.unsuccessfulAndIt(it.len == 4)
+    block:
+      let res = success[int, string](0xabc)
+      check res.unsuccessfulAndIt(it.len == 4) == false
+  test "`mapVal` function":
+    block:
+      let res = success[int, string](15).mapVal(val => val + 54)
+      check res.successful()
+      check res.unsafeGetVal()[] == 69
+    block:
+      let res = failure[int, string]("unalive").mapVal(val => val + val)
+      check res.unsuccessful()
+      check res.unsafeGetErr()[] == "unalive"
+  test "`mapValOr` function":
+    block:
+      let val = success[int, string](44).mapValOr(22, val => val - 4)
+      check val == 40
+    block:
+      let val = failure[int, string]("").mapValOr(22, val => val - 4)
+      check val == 22
+  test "`mapValOrElse` function":
+    block:
+      let val =
+        success[int, string](121)
+          .mapValOrElse(err => int(err[0]), val => val + 299)
+      check val == 420
+    block:
+      let val =
+        failure[int, string]("F")
+          .mapValOrElse(err => ord(err[0]), val => -val)
+      check val == ord('F')

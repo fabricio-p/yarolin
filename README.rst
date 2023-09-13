@@ -1,6 +1,8 @@
 #######
 yarolin
 #######
+**WIP**
+
 A library offering feature complete functionality for options and results.
 
 =====
@@ -66,16 +68,28 @@ TODO
     - ☑ ``!`` binary operator that makes a ``Result`` type.
     - ☑ ``!+`` and ``!-`` binary operators.
     - ☑ ``=!+`` and ``=!-`` binary operators.
-    - ☑ ``or`` operator that getVals the value of ``lhs`` if it is a success result and executes ``rhs`` if otherwise.
-    - ☑ ``try`` macro that causes the functions to return the result if it is a failure, otherwise just gives the getValed value.
-    - ☑ ``throw`` function that throws the error of the result as an exception if it is a failure, otherwise just gives the getValed value.
+    - ☑ ``or`` operator that gets the value of ``lhs`` if it is a success result and executes ``rhs`` if otherwise.
+    - ☑ ``try`` macro that causes the functions to return the result if it is a failure, otherwise just gives the value.
+    - ☑ ``throw`` function that throws the error of the result as an exception if it is a failure, otherwise just gives the value.
     - ☑ ``with`` macro that does pattern matching on the result.
+    - ☑ ``successfulAnd`` function that takes a predicate ``fn`` either returns the result of calling it on the value if the result is successful, or false.
+    - ☑ ``unsuccessfulAnd`` is similar but when the result is unsuccessful and calls ``fn`` on the error instead.
+    - ☑ ``successfulAndIt`` same as above but functions like the ``*It`` macros from sequtils.
+    - ☑ ``unsuccessfulAndIt`` same as above but functions like the ``*It`` macros from sequtils.
+    - ☑ ``mapVal`` either returns a success result with the value returned by the ``fn`` predicate called on the value if the result is successful, or a failure with the same error as the result.
+    - ☑ ``mapValOr`` returns the either mapped value by the ``fn`` predicate or a default value if the result is unsuccessful.
+    - ☑ ``mapValOrElse`` takes 2 predicate functions, one is called with the result's value if it is successful, the other with the error. Returns whatever they return.
+    - ☐ ``mapErr`` like ``mapVal`` but the other way around (with the error).
+    - ☐ ``mapItVal`` does the same as the one above, same difference as the other ``*It`` macros.
+    - ☐ ``mapValOr`` (same).
+    - ☐ ``mapValOrElse`` (same).
+    - ☐ ``mapErr`` (same).
   - ☑ Tests
 
   - ☐ Documentation.
 
-    - ☐ In code (heredocs or smth).
-    - ☐ In README.
+    - ☐ In code (heredocs, doc comments or smth).
+    - ☑ In README.
 
       - ☑ Basic examples.
       - ☐ At least half of functionality.
