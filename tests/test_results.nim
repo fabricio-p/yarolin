@@ -176,3 +176,44 @@ suite "results":
         failure[int, string]("F")
           .mapValOrElse(err => ord(err[0]), val => -val)
       check val == ord('F')
+  test "`mapErr` function":
+    block:
+      let res = failure[int, string]("foo").mapErr(err => err & " bar")
+      check res.unsuccessful()
+      check res.getErr() == "foo bar"
+    block:
+      let res = success[int, string](55).mapErr(err => err & " bar")
+      check res.successful()
+      check res.getVal() == 55
+  test "`mapValIt` macro":
+    block:
+      let res = success[int, string](15).mapValIt(it + 54)
+      check res.successful()
+      check res.unsafeGetVal()[] == 69
+    block:
+      let res = failure[int, string]("unalive").mapValIt(it + it)
+      check res.unsuccessful()
+      check res.unsafeGetErr()[] == "unalive"
+  test "`mapValOrIt` macro":
+    block:
+      let val = success[int, string](44).mapValOrIt(22, it - 4)
+      check val == 40
+    block:
+      let val = failure[int, string]("").mapValOrIt(22, it - 4)
+      check val == 22
+  test "`mapValOrElse` function":
+    block:
+      let val = success[int, string](121).mapValOrElseIt(int(it[0]), it + 299)
+      check val == 420
+    block:
+      let val = failure[int, string]("F").mapValOrElseIt(ord(it[0]), -it)
+      check val == ord('F')
+  test "`mapErrIt` macro":
+    block:
+      let res = failure[int, string]("foo").mapErrIt(it & " bar")
+      check res.unsuccessful()
+      check res.getErr() == "foo bar"
+    block:
+      let res = success[int, string](55).mapErrIt(it & " bar")
+      check res.successful()
+      check res.getVal() == 55

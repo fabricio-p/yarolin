@@ -79,11 +79,11 @@ TODO
     - ☑ ``mapVal`` either returns a success result with the value returned by the ``fn`` predicate called on the value if the result is successful, or a failure with the same error as the result.
     - ☑ ``mapValOr`` returns the either mapped value by the ``fn`` predicate or a default value if the result is unsuccessful.
     - ☑ ``mapValOrElse`` takes 2 predicate functions, one is called with the result's value if it is successful, the other with the error. Returns whatever they return.
-    - ☐ ``mapErr`` like ``mapVal`` but the other way around (with the error).
-    - ☐ ``mapItVal`` does the same as the one above, same difference as the other ``*It`` macros.
-    - ☐ ``mapValOr`` (same).
-    - ☐ ``mapValOrElse`` (same).
-    - ☐ ``mapErr`` (same).
+    - ☑ ``mapErr`` like ``mapVal`` but the other way around (with the error).
+    - ☑ ``mapValIt`` does the same as the one above, same difference as the other ``*It`` macros.
+    - ☑ ``mapValOrIt`` (same).
+    - ☑ ``mapValOrElseIt`` (same).
+    - ☑ ``mapErrIt`` (same).
   - ☑ Tests
 
   - ☐ Documentation.

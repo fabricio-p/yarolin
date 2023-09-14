@@ -209,7 +209,7 @@ proc mapVal*[V, E, U](res: sink Result[V, E],
   if res.successful():
     return success[U, E](fn(res.val))
   return failure[U, E](res.err)
-proc mapValOr*[V, E, U](res: sink Result[V, E],
+proc mapValOr*[V, E, U](res: sink Result[V, E],  
                         default: U,
                         fn: proc(val: V): U): U {.effectsOf: [fn].} =
   if res.successful():
@@ -223,9 +223,64 @@ proc mapValOrElse*[V, E, U](res: sink Result[V, E],
     return fn(res.val)
   return defaultFn(res.err)
 
+macro mapValIt*[V, E](res: sink Result[V, E], body: untyped): untyped =
+  let
+    resSym = genSym(ident = "res")
+    uSym = genSym(nskType, ident = "U")
+  quote do:
+    type
+      `uSym` = typeof(block:
+        var it {.inject, noinit.}: typeof(`res`.getVal())
+        `body`)
+    let `resSym` = `res`
+    if `resSym`.successful():
+      success[`uSym`, `resSym`.E](block:
+        let it {.inject.} = `resSym`.unsafeGetVal()[]
+        `body`)
+    else:
+      failure[`uSym`, `resSym`.E](`resSym`.unsafeGetErr()[])
+macro mapValOrIt*[V, E, U](res: sink Result[V, E],
+                           default: U,
+                           body: untyped): untyped =
+  let resSym = genSym(ident = "res")
+  quote do:
+    let `resSym` = `res`
+    if `resSym`.successful():
+      let it {.inject.} = `resSym`.unsafeGetVal()[]
+      `body`
+    else:
+      `default`
+macro mapValOrElseIt*[V, E](res: sink Result[V, E];
+                               errBody, body: untyped): untyped =
+  let resSym = genSym(ident = "res")
+  quote do:
+    let `resSym` = `res`
+    if `resSym`.successful():
+      let it {.inject.} = `resSym`.unsafeGetVal()[]
+      `body`
+    else:
+      let it {.inject.} = `resSym`.unsafeGetErr()[]
+      `errBody`
+
 proc mapErr*[V, E, F](res: sink Result[V, E],
                       fn: proc(val: E): F): Result[V, F]
                      {.effectsOf: [fn].} =
   if res.unsuccessful():
     return failure[V, F](fn(res.err))
   return success[V, F](res.val)
+macro mapErrIt*[V, E](res: sink Result[V, E], errBody: untyped): untyped =
+  let
+    resSym = genSym(ident = "res")
+    eSym = genSym(nskType, ident = "E")
+  quote do:
+    type
+      `eSym` = typeof(block:
+        var it {.inject, noinit.}: typeof(`res`.getErr())
+        `errBody`)
+    let `resSym` = `res`
+    if `resSym`.unsuccessful():
+      failure[`resSym`.V, `eSym`](block:
+        let it {.inject.} = `resSym`.unsafeGetErr()[]
+        `errBody`)
+    else:
+      success[`resSym`.V, `eSym`](`resSym`.unsafeGetVal()[])
