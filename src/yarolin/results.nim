@@ -11,23 +11,44 @@ else:
 import macros, strformat
 
 type
-  Result*[V, E] = object
-    val: V
-    err: E
+  Result*[V, E] = object ## The result container type. Applies optimization \
+                         ## when ``V`` or ``E`` are pointer types.
     when V isnot SomePointer and E isnot SomePointer:
       successful: bool
-  UnpackValDefect* = object of Defect
-  UnpackErrDefect* = object of Defect
+    val: V
+    err: E
 
-template `!`*[E, V](err: typedesc[E], val: typedesc[V]): untyped = Result[V, E]
+  UnpackValDefect* = object of Defect ## Defect thrown during the unpacking of\
+                                      ## the value from a failure result.
+  UnpackErrDefect* = object of Defect ## Defect thrown during the unpacking of\
+                                      ## the error from a success result.
+
+# TODO: Add more examples.
+
+func `$`*[V, E](res: Result[V, E]): string =
+  if res.successful():
+    fmt"Success({res.unsafeGetVal()[]})"
+  else:
+    fmt"Failure({res.unsafeGetErr()[]})"
+
+template `!`*[E, V](err: typedesc[E], val: typedesc[V]): untyped =
+  ## Creates a result type ``Result[V, E]`` where ``E!V``.
+  ##
+  ## .. code-block:: nim
+  ##
+  ##    int!void # Same as `Result[void, int]`
+  ##    string!float # Same as `Result[float, string]`
+  Result[V, E]
 
 proc success*[V, E](val: sink V): Result[V, E] {.inline.} =
+  ## Creates a success result with ``val`` as value.
   result.val = val
   when V isnot SomePointer:
     result.successful = true
   when E is SomePointer:
     result.err = nil
 proc failure*[V, E](err: sink E): Result[V, E] {.inline.} =
+  ## Creates a failure result with ``err`` as error.
   result.err = err
   when E isnot SomePointer:
     result.successful = false
@@ -35,6 +56,12 @@ proc failure*[V, E](err: sink E): Result[V, E] {.inline.} =
     result.err = nil
 
 proc successful*[V, E](res: Result[V, E]): bool {.inline.} =
+  ## Checks whether a given result ``res`` is a success result or not.
+  ##
+  ## .. code-block:: nim
+  ##
+  ##    success[int, int](10).successful() # true
+  ##    failure[int, int](10).successful() # false
   when V is SomePointer:
     result = not isNil(res.val)
   elif E is SomePointer:
@@ -42,13 +69,25 @@ proc successful*[V, E](res: Result[V, E]): bool {.inline.} =
   else:
     result = res.successful
 proc unsuccessful*[V, E](res: Result[V, E]): bool {.inline.} =
+  ## Checks whether a given result ``res`` is a failure result or not.
   not successful(res)
 
-proc unsafeGetVal*[V, E](res: Result[V, E]): ptr V {.inline.} = addr res.val
-proc unsafeGetErr*[V, E](res: Result[V, E]): ptr E {.inline.} = addr res.err
+proc unsafeGetVal*[V, E](res: Result[V, E]): ptr V {.inline.} =
+  ## Gets a pointer to the value of the result ``res`` regardless of its state.
+  addr res.val
+proc unsafeGetErr*[V, E](res: Result[V, E]): ptr E {.inline.} =
+  ## Gets a pointer to the error of the result ``res`` regardless of its state.
+  addr res.err
 
 proc getVal*[V, E](res: sink Result[V, E]): V
-                  {.inline, raises: [UnpackValDefect].} =
+                  {.inline, raises: UnpackValDefect.} =
+  ## Unpacks and returns the value if the result ``res`` is successful, raises
+  ## ``UnpackValDefect`` otherwise.
+  ##
+  ## .. code-block:: nim
+  ##
+  ##    success[int, int](44).getVal() # 44
+  ##    failure[int, int](45).getVal() # raises `UnpackValDefect`
   if not res.successful():
     raise newException(
       UnpackValDefect,
@@ -56,7 +95,14 @@ proc getVal*[V, E](res: sink Result[V, E]): V
   when V isnot void:
     result = res.val
 proc getErr*[V, E](res: sink Result[V, E]): E
-                  {.inline, raises: [UnpackErrDefect].} =
+                  {.inline, raises: UnpackErrDefect.} =
+  ## Unpacks the error if the result ``res`` is unsuccessful, raises
+  ## ``UnpackErrDefect`` otherwise.
+  ##
+  ## .. code-block:: nim
+  ##
+  ##    success[int, int](44).getErr() # 44
+  ##    failure[int, int](45).getErr() # raises `UnpackErrDefect`
   if res.successful():
     raise newException(
       UnpackErrDefect,
@@ -65,18 +111,84 @@ proc getErr*[V, E](res: sink Result[V, E]): E
     result = res.err
 
 template `!+`*[V, E](resultType: typedesc[Result[V, E]], val: sink V): untyped =
+  ## Given a result type ``R := Result[V, E]`` and a value ``val: V``,
+  ## creates a success result of type ``R`` with ``val`` as value.
+  ##
+  ## .. code-block:: nim
+  ##
+  ##    type R = Result[int, int]
+  ##    let res = R !+ 12 # same as success[R.V, R.E](12)
+  ##    # or
+  ##    let res = int!int !+ 12
   success[V, E](val)
 
 template `!-`*[V, E](resultType: typedesc[Result[V, E]], err: sink E): untyped =
+  ## Given a result type ``R := Result[V, E]`` and a value ``err: E``,
+  ## creates a failure result of type ``R`` with ``err`` as error.
+  ##
+  ## .. code-block:: nim
+  ##
+  ##    type R = Result[int, int]
+  ##    let res = R !- 43 # same as failure[R.V, R.E](43)
+  ##    # or
+  ##    let res = int!int !- 43 # same as failure[R.V, R.E](43)
   failure[V, E](err)
 
 template `=!+`*[V, E](res: var Result[V, E], val: sink V): untyped =
+  ## Given a variable ``res: var R`` where ``R := Result[V, E]`` and a value
+  ## ``val: V``, assigns ``res`` a success result of type ``R`` with ``val``
+  ## as value.
+  ##
+  ## .. code-block:: nim
+  ##
+  ##    proc foo(stuff: varargs[string]): string!int =
+  ##      # .. stuff?
+  ##      if smth:
+  ##        result =!+ 943
+  ##        return
+  ##      # .. other stuff
   res = success[V, E](val)
 
 template `=!-`*[V, E](res: var Result[V, E], err: sink E): untyped =
+  ## Given a variable ``res: var R`` where ``R := Result[V, E]`` and a value
+  ## ``err: E``, assigns ``res`` a failure result of type ``R`` with ``err``
+  ## as error.
+  ##
+  ## .. code-block:: nim
+  ##
+  ##    proc foo(stuff: varargs[string]): string!int =
+  ##      # .. stuff?
+  ##      if not smth:
+  ##        result =!- "smth is false"
+  ##        return
+  ##      # .. other stuff
   res = failure[V, E](err)
 
-macro `or`*[V, E](res: Result[V, E], body: untyped): untyped =
+macro `or`*[V, E](res: sink Result[V, E], body: untyped): untyped =
+  ## Given a value ``res: Result[V, E]``  and a tree (aka. whatever) ``body``,
+  ## unpacks the value of ``res`` of it is successful, otherwise executes
+  ## ``body``.
+  ##
+  ## .. code-block:: nim
+  ##
+  ##    discard success[int, int](1232) or (block:
+  ##      echo "Never gets executed"
+  ##      0)
+  ##    discard failure[int, int](0xdeadbabe) or (block:
+  ##      echo "This one does though"
+  ##      0) # we need the `0` so that the compiler doesn't complain about
+  ##         # incompatible types.
+  runnableExamples:
+    proc foo(fail: bool): int!int =
+      if fail:
+        result =!- 40
+      else:
+        result =!+ 48
+    proc bar(fail: bool): int!int =
+      let value = foo(fail) or (block: return int!int !- 1; 0)
+      result =!+ value
+    doAssert bar(false).getVal() == 48
+    doAssert bar(true).getErr() == 1
   let resSym = genSym(ident = "res")
   quote do:
     let `resSym` = `res`
@@ -173,12 +285,12 @@ macro with*[V, E](res: Result[V, E], body: untyped): untyped =
   result.add(ifStmt)
 
 proc successfulAnd*[V, E](res: Result[V, E], fn: proc(val: V): bool): bool
-                         {.effectsOf: [fn].} =
+                         {.effectsOf: fn.} =
   result = false
   if res.successful():
     result = fn(res.val)
 proc unsuccessfulAnd*[V, E](res: Result[V, E], fn: proc(err: E): bool): bool
-                           {.effectsOf: [fn].} =
+                           {.effectsOf: fn.} =
   result = false
   if res.unsuccessful():
     result = fn(res.err)
@@ -202,16 +314,14 @@ macro unsuccessfulAndIt*[V, E](res: Result[V, E], body: untyped): untyped =
     else:
       false
 
-# TODO: Macro versions
 proc mapVal*[V, E, U](res: sink Result[V, E],
-                      fn: proc(val: V): U): Result[U, E]
-                     {.effectsOf: [fn].} =
+                      fn: proc(val: V): U): Result[U, E] {.effectsOf: fn.} =
   if res.successful():
     return success[U, E](fn(res.val))
   return failure[U, E](res.err)
 proc mapValOr*[V, E, U](res: sink Result[V, E],  
                         default: U,
-                        fn: proc(val: V): U): U {.effectsOf: [fn].} =
+                        fn: proc(val: V): U): U {.effectsOf: fn.} =
   if res.successful():
     return fn(res.val)
   return default
@@ -263,8 +373,7 @@ macro mapValOrElseIt*[V, E](res: sink Result[V, E];
       `errBody`
 
 proc mapErr*[V, E, F](res: sink Result[V, E],
-                      fn: proc(val: E): F): Result[V, F]
-                     {.effectsOf: [fn].} =
+                      fn: proc(val: E): F): Result[V, F] {.effectsOf: fn.} =
   if res.unsuccessful():
     return failure[V, F](fn(res.err))
   return success[V, F](res.val)
