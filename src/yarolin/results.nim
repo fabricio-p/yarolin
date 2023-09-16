@@ -11,25 +11,50 @@ else:
 import macros, strformat
 
 type
-  Result*[V, E] = object ## The result container type. Applies optimization \
-    ## when ``V`` or ``E`` are pointer types.
+  Result*[V, E] = object
+    ## The result container type. Applies optimization when ``V`` or ``E`` are
+    ## pointer types.
     when V isnot SomePointer and E isnot SomePointer:
       successful: bool
     val: V
     err: E
 
-  UnpackValDefect* = object of Defect ## Defect thrown during the unpacking of\
-    ## the value from a failure result.
-  UnpackErrDefect* = object of Defect ## Defect thrown during the unpacking of\
-    ## the error from a success result.
+  UnpackValDefect* = object of Defect
+    ## Defect thrown during the unpacking of the value from a failure result.
+  UnpackErrDefect* = object of Defect
+    ## Defect thrown during the unpacking of the error from a success result.
 
 # TODO: Add more examples.
 
+func inspectString(s: string|cstring): string =
+  result.add("\"")
+  for c in s:
+    if c < 127.char or c == '\'':
+      result.add c
+    else:
+      result.addEscapedChar(c)
+  result.add("\"")
+
 func `$`*[V, E](res: Result[V, E]): string =
   if res.successful():
-    fmt"Success({res.unsafeGetVal()[]})"
+    result.add("success(")
+    when V is void:
+      result.add("()")
+    else:
+      when V is string or V is cstring:
+        result.add(inspectString(res.val))
+      else:
+        result.add($res.val)
   else:
-    fmt"Failure({res.unsafeGetErr()[]})"
+    result.add("failure(")
+    when E is void:
+      result.add("()")
+    else:
+      when E is string or E is cstring:
+        result.add(inspectString(res.err))
+      else:
+        result.add($res.err)
+  result.add(")")
 
 template `!`*[E, V](err: typedesc[E], val: typedesc[V]): untyped =
   ## Creates a result type ``Result[V, E]`` where ``E!V``.
@@ -181,13 +206,23 @@ template `=!-`*[V, E](res: var Result[V, E], err: sink E): untyped =
   res = failure[V, E](err)
 
 template returnVal*: untyped =
+  ## Causes the function in which it is called in to return a success result.
+  ## The function's return type *must* be of the form ``Result[void, E]`` for
+  ## some ``E: type``.
   return success[result.V, result.E]()
 template returnVal*(val: untyped): untyped =
+  ## Causes the function in which it is called in to return a success result
+  ## with ``val`` as value.
   return success[result.V, result.E](val)
 
 template returnErr*: untyped =
+  ## Causes the function in which it is called in to return a failure result.
+  ## The function's return type *must* be of the form ``Result[V, void]`` for
+  ## some ``V: type``.
   return failure[result.V, result.E]()
 template returnErr*(err: untyped): untyped =
+  ## Causes the function in which it is called in to return a failure result
+  ## with ``err`` as error.
   return failure[result.V, result.E](err)
 
 macro `or`*[V, E](res: sink Result[V, E], body: untyped): untyped =
@@ -222,6 +257,29 @@ macro `or`*[V, E](res: sink Result[V, E], body: untyped): untyped =
       `resSym`.unsafeGetVal()[]
     else:
       `body`
+
+macro orReturn*[V, E](res: sink Result[V, E], body: untyped): untyped =
+  runnableExamples:
+    proc foo(fail: bool): int!int =
+      if fail:
+        result =!- 40
+      else:
+        result =!+ 48
+    proc bar(fail: bool): int =
+      let value = foo(fail).orReturn 0
+      result = value
+    doAssert bar(false) == 48
+    doAssert bar(true) == 0
+  let resSym = genSym(ident = "res")
+  quote do:
+    let `resSym` = `res`
+    if `resSym`.unsuccessful():
+      {.push warnings:off.}
+      return `body`
+      {.pop.}
+      default(`resSym`.V)
+    else:
+      `resSym`.unsafeGetVal()[]
 
 # TODO: Doc comments
 macro `try`*[V, E](res: Result[V, E]): untyped =

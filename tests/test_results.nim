@@ -2,6 +2,10 @@ import unittest, typetraits, sugar
 import ../src/yarolin/results
 
 suite "results":
+  test "`$` function":
+    check $success[int, int](2134) == "success(2134)"
+    check $failure[void, string]("I'm out of ideas") ==
+            "failure(\"I'm out of ideas\")"
   test "`!` macro":
     check name(int!int) == "Result[system.int, system.int]"
     check name(int!void) == "Result[system.void, system.int]"
@@ -102,6 +106,17 @@ suite "results":
       res2 = failure[int, int](1231)
     check (res1 or 99) == 122
     check (res2 or 0xdead) == 0xdead
+  test "`orReturn` macro":
+    proc foo(fail: bool): int!int =
+      if fail:
+        result =!- 40
+      else:
+        result =!+ 48
+    proc bar(fail: bool): int =
+      let value = foo(fail).orReturn 0
+      result = value
+    check bar(false) == 48
+    check bar(true) == 0
   test "`try` macro":
     proc foo(fail: bool): string!int =
       if fail:
