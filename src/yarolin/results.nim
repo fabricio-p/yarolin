@@ -122,8 +122,7 @@ proc unsafeGetErr*[V, E](res: Result[V, E]): ptr E {.inline.} =
   ## Gets a pointer to the error of the result ``res`` regardless of its state.
   addr res.err
 
-proc getVal*[V, E](res: sink Result[V, E]): V
-                  {.inline, raises: UnpackValDefect.} =
+proc getVal*[V, E](res: sink Result[V, E]): V =
   ## Unpacks and returns the value if the result ``res`` is successful, raises
   ## ``UnpackValDefect`` otherwise.
   ##
@@ -137,15 +136,14 @@ proc getVal*[V, E](res: sink Result[V, E]): V
       "Tried to get the value of an failure Result")
   when V isnot void:
     result = res.val
-proc getErr*[V, E](res: sink Result[V, E]): E
-                  {.inline, raises: UnpackErrDefect.} =
+proc getErr*[V, E](res: sink Result[V, E]): E =
   ## Unpacks the error if the result ``res`` is unsuccessful, raises
   ## ``UnpackErrDefect`` otherwise.
   ##
   ## .. code-block:: nim
   ##
-  ##    success[int, int](44).getErr() # 44
-  ##    failure[int, int](45).getErr() # raises `UnpackErrDefect`
+  ##    failure[int, int](44).getErr() # 44
+  ##    success[int, int](45).getErr() # raises `UnpackErrDefect`
   if res.successful():
     raise newException(
       UnpackErrDefect,
