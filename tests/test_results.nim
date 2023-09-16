@@ -70,6 +70,32 @@ suite "results":
     res =!- -1
     check not successful(res)
     check res.getErr() == -1
+  test "returnVal macro":
+    block:
+      proc foo(fail: bool; a, b: int): Result[int, string] =
+        if not fail: returnVal a + b
+        failure[int, string]("too dumb to do basic computation")
+      check foo(false, 23213488, 43729956).successful()
+      check foo(true, 1, 2).unsuccessful()
+    block:
+      proc foo(fail: bool): Result[void, string] =
+        if not fail: returnVal()
+        failure[void, string]("now what")
+      check foo(false).successful()
+      check foo(true).unsuccessful()
+  test "returnErr macro":
+    block:
+      proc foo(fail: bool; a, b: int): Result[int, string] =
+        if fail: returnErr "too dumb to do basic computation"
+        success[int, string](a + b)
+      check foo(false, 23213488, 43729956).successful()
+      check foo(true, 1, 2).unsuccessful()
+    block:
+      proc foo(fail: bool): Result[void, string] =
+        if fail: returnErr "now what"
+        success[void, string]()
+      check foo(false).successful()
+      check foo(true).unsuccessful()
   test "`or` macro":
     let
       res1 = success[int, int](122)

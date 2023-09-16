@@ -68,6 +68,7 @@ TODO
     - ☑ ``!`` binary operator that makes a ``Result`` type.
     - ☑ ``!+`` and ``!-`` binary operators.
     - ☑ ``=!+`` and ``=!-`` binary operators.
+    - ☑ ``returnVal`` and ``returnErr`` macros that do exactly what their name tells.
     - ☑ ``or`` operator that gets the value of ``lhs`` if it is a success result and executes ``rhs`` if otherwise.
     - ☑ ``try`` macro that causes the functions to return the result if it is a failure, otherwise just gives the value.
     - ☑ ``throw`` function that throws the error of the result as an exception if it is a failure, otherwise just gives the value.

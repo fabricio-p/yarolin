@@ -12,16 +12,16 @@ import macros, strformat
 
 type
   Result*[V, E] = object ## The result container type. Applies optimization \
-                         ## when ``V`` or ``E`` are pointer types.
+    ## when ``V`` or ``E`` are pointer types.
     when V isnot SomePointer and E isnot SomePointer:
       successful: bool
     val: V
     err: E
 
   UnpackValDefect* = object of Defect ## Defect thrown during the unpacking of\
-                                      ## the value from a failure result.
+    ## the value from a failure result.
   UnpackErrDefect* = object of Defect ## Defect thrown during the unpacking of\
-                                      ## the error from a success result.
+    ## the error from a success result.
 
 # TODO: Add more examples.
 
@@ -40,20 +40,38 @@ template `!`*[E, V](err: typedesc[E], val: typedesc[V]): untyped =
   ##    string!float # Same as `Result[float, string]`
   Result[V, E]
 
-proc success*[V, E](val: sink V): Result[V, E] {.inline.} =
+func success*[V: void; E](): Result[V, E] {.inline.} =
+  ## Creates a success result with a missing value.
+  when V isnot SomePointer and E isnot SomePointer: # we can't use ``nil`` for\
+                                                    # any of the fields to\
+                                                    # indicate the state, so we
+                                                    # set the boolean flag
+    result.successful = true
+  else:
+    result.err = nil
+proc success*[V: not void; E](val: sink V): Result[V, E] {.inline.} =
   ## Creates a success result with ``val`` as value.
   result.val = val
-  when V isnot SomePointer:
+  when V isnot SomePointer and E isnot SomePointer:
     result.successful = true
-  when E is SomePointer:
+  else:
     result.err = nil
-proc failure*[V, E](err: sink E): Result[V, E] {.inline.} =
+proc failure*[V; E: void](): Result[V, E] {.inline.} =
+  ## Creates a failure result with a missing error.
+  when E isnot SomePointer and V isnot SomePointer:
+    result.successful = false
+  else:
+    result.err = nil
+func failure*[V; E: not void](err: sink E): Result[V, E] {.inline.} =
   ## Creates a failure result with ``err`` as error.
   result.err = err
-  when E isnot SomePointer:
+  when E isnot SomePointer and V isnot SomePointer:
     result.successful = false
-  when V is SomePointer:
+  else:
     result.err = nil
+
+func default*[V, E](resType: typedesc[Result[V, E]]): Result[V, E] =
+  failure[V, E](default(V))
 
 proc successful*[V, E](res: Result[V, E]): bool {.inline.} =
   ## Checks whether a given result ``res`` is a success result or not.
@@ -121,7 +139,6 @@ template `!+`*[V, E](resultType: typedesc[Result[V, E]], val: sink V): untyped =
   ##    # or
   ##    let res = int!int !+ 12
   success[V, E](val)
-
 template `!-`*[V, E](resultType: typedesc[Result[V, E]], err: sink E): untyped =
   ## Given a result type ``R := Result[V, E]`` and a value ``err: E``,
   ## creates a failure result of type ``R`` with ``err`` as error.
@@ -148,7 +165,6 @@ template `=!+`*[V, E](res: var Result[V, E], val: sink V): untyped =
   ##        return
   ##      # .. other stuff
   res = success[V, E](val)
-
 template `=!-`*[V, E](res: var Result[V, E], err: sink E): untyped =
   ## Given a variable ``res: var R`` where ``R := Result[V, E]`` and a value
   ## ``err: E``, assigns ``res`` a failure result of type ``R`` with ``err``
@@ -163,6 +179,16 @@ template `=!-`*[V, E](res: var Result[V, E], err: sink E): untyped =
   ##        return
   ##      # .. other stuff
   res = failure[V, E](err)
+
+template returnVal*: untyped =
+  return success[result.V, result.E]()
+template returnVal*(val: untyped): untyped =
+  return success[result.V, result.E](val)
+
+template returnErr*: untyped =
+  return failure[result.V, result.E]()
+template returnErr*(err: untyped): untyped =
+  return failure[result.V, result.E](err)
 
 macro `or`*[V, E](res: sink Result[V, E], body: untyped): untyped =
   ## Given a value ``res: Result[V, E]``  and a tree (aka. whatever) ``body``,
@@ -197,6 +223,7 @@ macro `or`*[V, E](res: sink Result[V, E], body: untyped): untyped =
     else:
       `body`
 
+# TODO: Doc comments
 macro `try`*[V, E](res: Result[V, E]): untyped =
   let resSym = genSym(ident = "res")
   quote do:
@@ -361,7 +388,7 @@ macro mapValOrIt*[V, E, U](res: sink Result[V, E],
     else:
       `default`
 macro mapValOrElseIt*[V, E](res: sink Result[V, E];
-                               errBody, body: untyped): untyped =
+                            errBody, body: untyped): untyped =
   let resSym = genSym(ident = "res")
   quote do:
     let `resSym` = `res`
