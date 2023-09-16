@@ -47,6 +47,26 @@ Options
   echo a.at(0).get() # prints "1"
   echo a.at(100).isSome() # prints "false"
 
+.. code-block:: nim
+
+    import strtabs, strutils
+    import yarolin/options
+
+    type Config = object
+      width, height, fontSize: int
+      font: string
+
+    func get(strtab: StringTableRef, key: string): ?string =
+      if strtab.hasKey(key):
+        return some(strtab[key])
+      result = none(string)
+
+    func getConfig(strtab: StringTableRef): Config =
+      Config(
+        width: strtab.get("width").map(parseInt) or 680,
+        height: strtab.get("height").map(parseInt) or 460,
+        fontSize: strtab.get("fontSize").map(parseInt) or 30,
+        font: strtab.get("font") or "monospace")
 ====
 TODO
 ====
