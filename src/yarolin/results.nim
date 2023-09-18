@@ -272,15 +272,18 @@ macro orReturn*[V, E](res: sink Result[V, E], body: untyped): untyped =
   quote do:
     let `resSym` = `res`
     if `resSym`.unsuccessful():
-      {.push warnings:off.}
+      {.push warnings:off.} # so that it won't complain about unused values.
       return `body`
       {.pop.}
       default(`resSym`.V)
     else:
       `resSym`.unsafeGetVal()[]
 
-# TODO: Doc comments
 macro `try`*[V, E](res: Result[V, E]): untyped =
+  ## Unpacks the value of ``res`` if it is a success result, otherwise causes
+  ## the function in which it is called to return a failure result with the
+  ## error of ``res``. The function that we are refering to *must* have return
+  ## type ``Result[U, E]`` where ``U: type``.
   let resSym = genSym(ident = "res")
   quote do:
     let `resSym` = `res`
@@ -290,17 +293,53 @@ macro `try`*[V, E](res: Result[V, E]): untyped =
       result =!- `resSym`.unsafeGetErr()[]
       return
 
-func throw*[V, E, X](res: sink Result[V, E], errorType: typedesc[X]): V =
+func throw*[V, E, X](res: sink Result[V, E], errorType: typedesc[X]): V
+                    {.raises: X.} =
+  ##  Unpacks and returns the value of ``res`` if it is a success result,
+  ##  otherwise raises ``errorType`` with the stringifed error as message.
   if not res.successful():
     raise newException(X, $(res.unsafeGetErr()[]))
   when V isnot void:
     result = res.val
 
-func throw*[V, E](res: sink Result[V, E]): V =
+func throw*[V, E](res: sink Result[V, E]): V {.raises: CatchableError.} =
+  ## Unpacks and returns the value of ``res`` when it is a success result,
+  ## otherwise calls `throw <#throw,sinkResult[V,E],typedesc[X]>`_.
   when V isnot void:
     result = res.throw(CatchableError)
 
 macro with*[V, E](res: Result[V, E], body: untyped): untyped =
+  ## Does pattern matching on ``res`` and executes either of the branches in
+  ## ``body`` depending on the kind of the result.
+  ##
+  ##  General shape:
+  ##
+  ## .. code-block:: nim
+  ##    with resultValue:
+  ##      success(val):
+  ##        # do stuff with `val`
+  ##      failure(err):
+  ##      # do stuff with `err`
+  ##
+  ## Features:
+  ##
+  ## .. code-block:: nim
+  ##    with resultValue:
+  ##      # `val` is declared with `var` and not `let`
+  ##      success(var val):
+  ##        val = doStuff(val) # which means you can do this
+  ##      # you can ignore the value/error alltogether by binding it to `_`
+  ##      failure(_):
+  ##        quit(1)
+  runnableExamples:
+    proc foo(res: Result[int, int]): string =
+      res.with:
+        success(val):
+          result = "good " & $val
+        failure(err):
+          result = "bad " & $err
+    doAssert foo(success[int, int](23)) == "good 23"
+    doAssert foo(failure[int, int](43)) == "bad 43"
   let resSym = genSym(ident = "res")
   body.expectLen 1, 2
   result =
@@ -369,16 +408,38 @@ macro with*[V, E](res: Result[V, E], body: untyped): untyped =
 
 proc successfulAnd*[V, E](res: Result[V, E], fn: proc(val: V): bool): bool
                          {.effectsOf: fn.} =
+  ## Returns ``true`` when ``res`` is a success result and the predicate ``fn``
+  ## returns ``true`` when applied to the value of ``res``, ``false`` otherwise.
+  runnableExamples:
+    import sugar
+
+    doAssert success[int, string](43).successfulAnd(val => val > 40)
+    doAssert success[int, string](33).successfulAnd(val => val > 40) == false
+    doAssert failure[int, string]("ded").successfulAnd(val => val != 0) == false
   result = false
   if res.successful():
     result = fn(res.val)
 proc unsuccessfulAnd*[V, E](res: Result[V, E], fn: proc(err: E): bool): bool
                            {.effectsOf: fn.} =
+  ## Returns ``true`` when ``res`` is a failure result and the predicate ``fn``
+  ## returns ``true`` when applied to the error of ``res``, ``false`` otherwise.
+  runnableExamples:
+    import sugar
+
+    doAssert failure[int, string]("ded").unsuccessfulAnd(err => err.len == 3)
+    doAssert failure[int, string]("ded")
+              .unsuccessfulAnd(err => err.len == 0) == false
+    doAssert success[int, string](43).unsuccessfulAnd(_ => true) == false
   result = false
   if res.unsuccessful():
     result = fn(res.err)
 
 macro successfulAndIt*[V, E](res: Result[V, E], body: untyped): untyped =
+  ## Works the same as `successfulAnd <#successfulAnd,Result[V,E],proc(V)>`_
+  ## but instead of taking a predicate function, it takes an AST and declares
+  ## the variable ``it`` with the value of the result, which can be used inside
+  ## ``body``, wich is executed when ``res`` is a success result to determine
+  ## the return value (either ``true`` or ``false``).
   let resSym = genSym(ident = "res")
   quote do:
     let `resSym` = `res`
@@ -388,6 +449,11 @@ macro successfulAndIt*[V, E](res: Result[V, E], body: untyped): untyped =
     else:
       false
 macro unsuccessfulAndIt*[V, E](res: Result[V, E], body: untyped): untyped =
+  ## Works the same as `unsuccessfulAnd <#unsuccessfulAnd,Result[V,E],proc(E)>`_
+  ## but instead of taking a predicate function, it takes an AST and declares
+  ## the variable ``it`` with the error of the result, which can be used inside
+  ## ``body``, wich is executed when ``res`` is a failure result to determine
+  ## the return value (either ``true`` or ``false``).
   let resSym = genSym(ident = "res")
   quote do:
     let `resSym` = `res`
@@ -397,6 +463,7 @@ macro unsuccessfulAndIt*[V, E](res: Result[V, E], body: untyped): untyped =
     else:
       false
 
+# TODO: Doc comments
 proc mapVal*[V, E, U](res: sink Result[V, E],
                       fn: proc(val: V): U): Result[U, E] {.effectsOf: fn.} =
   if res.successful():
