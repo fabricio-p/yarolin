@@ -319,7 +319,7 @@ macro with*[V, E](res: Result[V, E], body: untyped): untyped =
     `case`[0].expectKind nnkIdent
     `case`[1].expectKind { nnkIdent, nnkVarTy }
     var branch =
-      if `case`[0].strVal == "successful":
+      if `case`[0].strVal == "success":
         onSuccess = nnkStmtList.newNimNode()
         onSuccess
       elif `case`[0].strVal == "failure":
@@ -327,7 +327,7 @@ macro with*[V, E](res: Result[V, E], body: untyped): untyped =
         onFailure
       else:
         error(
-          fmt"Expected 'successful' or 'failure', found {`case`[0].strVal}",
+          fmt"Expected 'success' or 'failure', found {`case`[0].strVal}",
           `case`[0])
         break
     let

@@ -1,4 +1,5 @@
 import unittest, typetraits, sugar
+# from macros import expandMacros
 import ../src/yarolin/results
 
 suite "results":
@@ -162,6 +163,23 @@ suite "results":
       except Death:
         died = true
       check died == true
+  test "`with` macro":
+    with success[bool, bool](true):
+      success(val):
+        check val
+      failure(_):
+        check false
+    with failure[bool, bool](false):
+      success(_):
+        check false
+      failure(var err):
+        err = not err
+        check err
+    with success[void, void]():
+      success(var _):
+        check true
+      failure(_):
+        check false
   test "`successfulAnd` function":
     block:
       let res = success[int, string](0xabc)
