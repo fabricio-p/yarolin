@@ -10,20 +10,20 @@ suite "results":
   test "`!` macro":
     check name(int!int) == "Result[system.int, system.int]"
     check name(int!void) == "Result[system.void, system.int]"
-  test "successful function":
+  test "`successful` function":
     check successful(success[int, void](12))
     check not successful(failure[void, string]("boo"))
-  test "unsafeGetVal function":
+  test "`unsafeGetVal` function":
     let res = success[int, void](10)
     check unsafeGetVal(res) != nil
     check name(typeof(unsafeGetVal(res))) == "ptr int"
     check unsafeGetVal(res)[] == 10
-  test "unsafeGetErr function":
+  test "`unsafeGetErr` function":
     let res = failure[void, int](420)
     check unsafeGetErr(res) != nil
     check name(typeof(unsafeGetErr(res))) == "ptr int"
     check unsafeGetErr(res)[] == 420
-  test "getVal function":
+  test "`getVal` function":
     block:
       let res = success[int, void](1244)
       var raised = false
@@ -40,7 +40,7 @@ suite "results":
       except UnpackValDefect:
         raised = true
       check raised == true
-  test "getErr function":
+  test "`getErr` function":
     block:
       let res = failure[void, int](765456)
       var raised = false
@@ -75,7 +75,7 @@ suite "results":
     res =!- -1
     check not successful(res)
     check res.getErr() == -1
-  test "returnVal macro":
+  test "`returnVal macro":
     block:
       proc foo(fail: bool; a, b: int): Result[int, string] =
         if not fail: returnVal a + b
@@ -88,7 +88,7 @@ suite "results":
         failure[void, string]("now what")
       check foo(false).successful()
       check foo(true).unsuccessful()
-  test "returnErr macro":
+  test "`returnErr macro":
     block:
       proc foo(fail: bool; a, b: int): Result[int, string] =
         if fail: returnErr "too dumb to do basic computation"

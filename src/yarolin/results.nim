@@ -95,8 +95,7 @@ func failure*[V; E: not void](err: sink E): Result[V, E] {.inline.} =
   else:
     result.err = nil
 
-func default*[V, E](resType: typedesc[Result[V, E]]): Result[V, E] =
-  failure[V, E](default(V))
+func default*[V, E](resType: typedesc[Result[V, E]]) {.error.}
 
 proc successful*[V, E](res: Result[V, E]): bool {.inline.} =
   ## Checks whether a given result ``res`` is a success result or not.
