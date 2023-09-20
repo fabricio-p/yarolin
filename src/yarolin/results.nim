@@ -462,15 +462,41 @@ macro unsuccessfulAndIt*[V, E](res: Result[V, E], body: untyped): untyped =
     else:
       false
 
-# TODO: Doc comments
 proc mapVal*[V, E, U](res: sink Result[V, E],
                       fn: proc(val: V): U): Result[U, E] {.effectsOf: fn.} =
+  ## Creates and returns a success result with the return value of the function
+  ## ``fn`` applied on the value of ``res`` as value when ``res`` is a success
+  ## result, otherwise returns a failure result with the error of ``res`` as
+  ## error.
+  runnableExamples:
+    import sugar
+
+    block:
+      let res = success[int, string](23).mapVal(val => val * 2)
+      doAssert res.successful()
+      doAssert res.getVal() == 46
+
+    block:
+      let res = failure[int, string]("failed").mapVal(val => val div 3)
+      doAssert res.unsuccessful()
+      doAssert res.getErr() == "failed"
   if res.successful():
     return success[U, E](fn(res.val))
   return failure[U, E](res.err)
-proc mapValOr*[V, E, U](res: sink Result[V, E],  
+proc mapValOr*[V, E, U](res: sink Result[V, E],
                         default: U,
                         fn: proc(val: V): U): U {.effectsOf: fn.} =
+  ## Returns the return value of ``fn`` applied on the value of ``res`` if it
+  ## is a success result and ``default`` otherwise.
+  runnableExamples:
+    import sugar
+
+    block:
+      let value = success[int, string](76).mapValOr(0, val => val - 100)
+      doAssert value == -24
+    block:
+      let value = failure[int, string]("failed").mapValOr(0, val => val - 100)
+      doAssert value == 0
   if res.successful():
     return fn(res.val)
   return default
@@ -478,10 +504,28 @@ proc mapValOrElse*[V, E, U](res: sink Result[V, E],
                             defaultFn: proc(err: E): U,
                             fn: proc(val: V): U): U
                            {.effectsOf: [fn, defaultFn].} =
+  ## Returns the return value of ``fn`` applied over the value of ``res`` when
+  ## it is a success result, or the return value of ``defaultFn`` applied
+  ## over the error of ``res`` when it is a failure result.
+  runnableExamples:
+    # highly oversimplified example
+    import sugar
+
+    block:
+      let value =
+        success[int, string](42)
+          .mapValOrElse(err => err.len, val => -val)
+      doAssert value == -42
+    block:
+      let value =
+        failure[int, string]("L")
+          .mapValOrElse(err => err.len, val => -val)
+      doAssert value == 1
   if res.successful():
     return fn(res.val)
   return defaultFn(res.err)
 
+# TODO: Doc comments
 macro mapValIt*[V, E](res: sink Result[V, E], body: untyped): untyped =
   let
     resSym = genSym(ident = "res")

@@ -3,8 +3,6 @@ export options
 
 import macros
 
-{.experimental: "callOperator".}
-
 template `?`*[T](ty: typedesc[T]): untyped = Option[T]
 
 macro `or`*[T](option: Option[T], body: untyped): untyped =
