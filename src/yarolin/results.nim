@@ -274,7 +274,7 @@ macro orReturn*[V, E](res: sink Result[V, E], body: untyped): untyped =
       {.push warnings:off.} # so that it won't complain about unused values.
       return `body`
       {.pop.}
-      default(`resSym`.V)
+      zeroDefault(`resSym`.V)
     else:
       `resSym`.unsafeGetVal()[]
 
@@ -525,8 +525,18 @@ proc mapValOrElse*[V, E, U](res: sink Result[V, E],
     return fn(res.val)
   return defaultFn(res.err)
 
-# TODO: Doc comments
 macro mapValIt*[V, E](res: sink Result[V, E], body: untyped): untyped =
+  ## Functions the same as `mapVal <#mapVal,sinkResult[V,E],proc(V):U>`_, but
+  ## instead of taking and calling a function, it takes and executes an AST,
+  ## providing the value of ``res`` as the variable ``it``.
+  runnableExamples:
+    block:
+      let res = success[int, string](95845).mapValIt(it div 10)
+      doAssert res.successful()
+      doAssert res.getVal() == 9584
+    block:
+      let res = failure[int, string]("won't be executed").mapValIt(it div 0)
+      doAssert res.unsuccessful()
   let
     resSym = genSym(ident = "res")
     uSym = genSym(nskType, ident = "U")
@@ -545,6 +555,17 @@ macro mapValIt*[V, E](res: sink Result[V, E], body: untyped): untyped =
 macro mapValOrIt*[V, E, U](res: sink Result[V, E],
                            default: U,
                            body: untyped): untyped =
+  ## Functions the same as
+  ## `mapValOrIt <#mapValOr,sinkResult[V,E],U,proc(V):U>`_, but instead of
+  ## taking and calling a function, it takes and executes an AST, providing the
+  ## value of ``res`` as the variable ``it``.
+  runnableExamples:
+    block:
+      let value = success[int, string](76).mapValOrIt(0, it - 100)
+      doAssert value == -24
+    block:
+      let value = failure[int, string]("failed").mapValOrIt(0, it - 100)
+      doAssert value == 0
   let resSym = genSym(ident = "res")
   quote do:
     let `resSym` = `res`
@@ -555,6 +576,19 @@ macro mapValOrIt*[V, E, U](res: sink Result[V, E],
       `default`
 macro mapValOrElseIt*[V, E](res: sink Result[V, E];
                             errBody, body: untyped): untyped =
+  ## Functions the same as
+  ## `mapValOr <#mapValOrElse,sinkResult[V,E],U,proc(E):V,proc(V):U>`_, but
+  ## instead of taking and calling functions, it takes and executes ASTs,
+  ## providing the value of ``res`` as the variable ``it`` for ``body`` and
+  ## the error of ``res`` as the variable ``it`` for ``errBody``.
+  runnableExamples:
+    # highly oversimplified example
+    block:
+      let value = success[int, string](42).mapValOrElseIt(it.len, -it)
+      doAssert value == -42
+    block:
+      let value = failure[int, string]("L").mapValOrElseIt(it.len, -it)
+      doAssert value == 1
   let resSym = genSym(ident = "res")
   quote do:
     let `resSym` = `res`
@@ -565,6 +599,7 @@ macro mapValOrElseIt*[V, E](res: sink Result[V, E];
       let it {.inject.} = `resSym`.unsafeGetErr()[]
       `errBody`
 
+# TODO: Doc comments
 proc mapErr*[V, E, F](res: sink Result[V, E],
                       fn: proc(val: E): F): Result[V, F] {.effectsOf: fn.} =
   if res.unsuccessful():
