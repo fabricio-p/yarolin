@@ -276,3 +276,35 @@ suite "results":
       let res = success[int, string](55).mapErrIt(it & " bar")
       check res.successful()
       check res.getVal() == 55
+  test "`borrowVal` function":
+    proc foo(fail: bool): Result[string, int] =
+      if fail:
+        result =!- 0
+      else:
+        result =!+ ""
+        for i in 1..5:
+          result.borrowVal().add(if i == 1: $i else: "-" & $i)
+    block:
+      let res = foo(false)
+      check res.successful()
+      check res.getVal() == "1-2-3-4-5"
+    block:
+      let res = foo(true)
+      check res.unsuccessful()
+      check res.getErr() == 0
+  test "`borrowErr` function":
+    proc foo(fail: bool): Result[string, int] =
+      if fail:
+        result =!- 0
+        for i in 1..5:
+          inc result.borrowErr(), i
+      else:
+        result =!+ ""
+    block:
+      let res = foo(false)
+      check res.successful()
+      check res.getVal() == ""
+    block:
+      let res = foo(true)
+      check res.unsuccessful()
+      check res.getErr() == 15

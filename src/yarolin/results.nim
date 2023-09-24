@@ -95,7 +95,8 @@ func failure*[V; E: not void](err: sink E): Result[V, E] {.inline.} =
   else:
     result.err = nil
 
-func default*[V, E](resType: typedesc[Result[V, E]]) {.error.}
+func default*[V, E](resType: typedesc[Result[V, E]])
+                   {.error: "A result can't have a default variant".}
 
 proc successful*[V, E](res: Result[V, E]): bool {.inline.} =
   ## Checks whether a given result ``res`` is a success result or not.
@@ -522,7 +523,7 @@ proc mapValOrElse*[V, E, U](res: sink Result[V, E],
   return defaultFn(res.err)
 
 macro mapValIt*[V, E](res: sink Result[V, E], body: untyped): untyped =
-  ## Functions the same as `mapVal <#mapVal,sinkResult[V,E],proc(V):U>`_, but
+  ## Functions the same as `mapVal <#mapVal,sinkResult[V,E],proc(V)>`_, but
   ## instead of taking and calling a function, it takes and executes an AST,
   ## providing the value of ``res`` as the variable ``it``.
   runnableExamples:
@@ -551,7 +552,7 @@ macro mapValOrIt*[V, E, U](res: sink Result[V, E],
                            default: U,
                            body: untyped): untyped =
   ## Functions the same as
-  ## `mapValOrIt <#mapValOr,sinkResult[V,E],U,proc(V):U>`_, but instead of
+  ## `mapValOrIt <#mapValOr,sinkResult[V,E],U,proc(V)>`_, but instead of
   ## taking and calling a function, it takes and executes an AST, providing the
   ## value of ``res`` as the variable ``it``.
   runnableExamples:
@@ -572,7 +573,7 @@ macro mapValOrIt*[V, E, U](res: sink Result[V, E],
 macro mapValOrElseIt*[V, E](res: sink Result[V, E];
                             errBody, body: untyped): untyped =
   ## Functions the same as
-  ## `mapValOr <#mapValOrElse,sinkResult[V,E],U,proc(E):V,proc(V):U>`_, but
+  ## `mapValOrElse <#mapValOrElse,sinkResult[V,E],proc(E),proc(V)>`_, but
   ## instead of taking and calling functions, it takes and executes ASTs,
   ## providing the value of ``res`` as the variable ``it`` for ``body`` and
   ## the error of ``res`` as the variable ``it`` for ``errBody``.
@@ -615,7 +616,7 @@ proc mapErr*[V, E, F](res: sink Result[V, E],
     return failure[V, F](fn(res.err))
   return success[V, F](res.val)
 macro mapErrIt*[V, E](res: sink Result[V, E], errBody: untyped): untyped =
-  ## Functions the same as `mapErr <#mapErr,sinkResult[V,E],proc(E):F>`_, but
+  ## Functions the same as `mapErr <#mapErr,sinkResult[V,E],proc(E)>`_, but
   ## instead of taking and calling a function, it takes and executes an AST,
   ## providing the error of ``res`` as the variable ``it``.
   runnableExamples:
@@ -647,3 +648,8 @@ macro mapErrIt*[V, E](res: sink Result[V, E], errBody: untyped): untyped =
       failure[`resSym`.V, `eSym`](`errBody`)
     else:
       success[`resSym`.V, `eSym`](`resSym`.unsafeGetVal()[])
+
+func borrowVal*[V, E](res: var Result[V, E]): var V = res.val
+  ## Borrows the value of ``res`` by reference.
+func borrowErr*[V, E](res: var Result[V, E]): var E = res.err
+  ## Borrows the error of ``res`` by reference.
