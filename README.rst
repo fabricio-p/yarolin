@@ -109,8 +109,8 @@ TODO
 
   - ☐ Documentation.
 
-    - ☐ In code (heredocs, doc comments or smth).
-    - ☑ In README.
+    - ☑ In code (heredocs, doc comments or smth).
+    - ☐ In README.
 
       - ☑ Basic examples.
       - ☐ At least half of functionality.
@@ -118,4 +118,15 @@ TODO
 - ☐ Options.
 
   - ☑ Reuse and expose ``std/options``.
-  - ☐ Other stuff.
+  - ☐ Utility macros and functions.
+    - ☑ ``?`` unary operator that creates an ``Option`` type.
+    - ☑ ``or`` macro that gets the value of ``lhs`` if it is ``some`` otherwise executes ``rhs``.
+    - ☑ ``<->``  operator that either unpacks ``lhs`` or ``rhs`` if ``lhs`` is none.
+    - ☑ ``mapIt`` macro.
+    - ☑ ``map2`` function that maps 2 options together.
+    - ☑ ``map2AB`` macros that works like ``map2`` but takes and executes a tree with ``a`` as the value of ``lhs`` and ``b`` as the value of ``rhs`` instead of taking a calling a predicate function.
+    - ☐ ``try`` macro.
+    - ☐ ``orReturn`` macro.
+    - ☐ ``isSomeAnd`` function.
+    - ☐ ``isSomeAndIt`` macro.
+    - ☐ ``flatten`` function.
