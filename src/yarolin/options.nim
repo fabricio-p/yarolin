@@ -69,3 +69,35 @@ macro map2AB*[V1, V2](opt1: Option[V1],
           b {.inject, noinit.}: `opt2Sym`.T
         `body`)
       none(`v3Sym`)
+
+macro `try`*[T](opt: sink Option[T]): untyped =
+  let optSym = genSym(ident = "opt")
+  quote do:
+    let `optSym` = `opt`
+    if not `optSym`.isSome():
+      return none(result.T)
+    `optSym`.unsafeGet()
+
+macro orReturn*[T](opt: sink Option[T], value: untyped): untyped =
+  let optSym = genSym(ident = "opt")
+  quote do:
+    let `optSym` = `opt`
+    if not `optSym`.isSome():
+      return `value`
+    `optSym`.unsafeGet()
+
+proc isSomeAnd*[T](opt: Option[T], fn: proc(val: T): bool): bool
+                   {.effectsOf: fn.} =
+  result = false
+  if opt.isSome():
+    result = fn(opt.unsafeGet())
+
+macro isSomeAndIt*[T](opt: Option[T], body: untyped): untyped =
+  let optSym = genSym(ident = "opt")
+  quote do:
+    let `optSym` = `opt`
+    if `optSym`.isSome():
+      let it {.inject.} = `optSym`.unsafeGet()
+      `body`
+    else:
+      false

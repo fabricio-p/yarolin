@@ -125,8 +125,7 @@ TODO
     - ☑ ``mapIt`` macro.
     - ☑ ``map2`` function that maps 2 options together.
     - ☑ ``map2AB`` macros that works like ``map2`` but takes and executes a tree with ``a`` as the value of ``lhs`` and ``b`` as the value of ``rhs`` instead of taking a calling a predicate function.
-    - ☐ ``try`` macro.
-    - ☐ ``orReturn`` macro.
-    - ☐ ``isSomeAnd`` function.
-    - ☐ ``isSomeAndIt`` macro.
-    - ☐ ``flatten`` function.
+    - ☑ ``try`` macro.
+    - ☑ ``orReturn`` macro.
+    - ☑ ``isSomeAnd`` function.
+    - ☑ ``isSomeAndIt`` macro.
