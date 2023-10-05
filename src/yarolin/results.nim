@@ -26,23 +26,23 @@ type
 
 # TODO: Add more examples.
 
-func inspectString(s: string|cstring): string =
-  result.add("\"")
+proc inspectString(s: string|cstring, o: var string): string =
+  o.add('"')
   for c in s:
     if c < 127.char or c == '\'':
-      result.add c
+      o.add c
     else:
-      result.addEscapedChar(c)
-  result.add("\"")
+      o.addEscapedChar(c)
+  o.add('"')
 
-func `$`*[V, E](res: Result[V, E]): string =
+proc `$`*[V, E](res: Result[V, E]): string =
   if res.successful():
     result.add("success(")
     when V is void:
       result.add("()")
     else:
       when V is string or V is cstring:
-        result.add(inspectString(res.val))
+        inspectString(res.val, result)
       else:
         result.add($res.val)
   else:
@@ -51,7 +51,7 @@ func `$`*[V, E](res: Result[V, E]): string =
       result.add("()")
     else:
       when E is string or E is cstring:
-        result.add(inspectString(res.err))
+        inspectString(res.err, result)
       else:
         result.add($res.err)
   result.add(")")
