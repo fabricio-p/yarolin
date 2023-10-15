@@ -22,9 +22,11 @@ Most of people today (2023-10-09) already have some sort of idea what results an
 
 Monads are a very clean way to encapsulate explicit control flow and branching into a more linear structure, by encapsulating the operations on the values and handling the other details themselves. Your average control flow adventures may include checking if a value is something like ``null``, checking the status of an operation, looping, etc and doing something different on each case. With results and options you just specify the name of the operation and the operation itself. The branching is handled by the functions of the monad.
 
-.. blockquote::
+..
 
-    *FUN FACT*: Lists and arrays with their ``map`` and ``filter`` functions/methods are monads.
+  *FUN FACT*: Lists and arrays with their ``map`` and ``filter`` functions/methods are monads.
+
+..
 
 -------
 Results
